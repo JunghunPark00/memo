@@ -1,0 +1,16 @@
+{
+  "taxonomy": {
+    "core_categories": ["idea", "todo", "reference", "log"],
+    "allow_custom_tags": true
+  },
+  "summarization": {
+    "enabled": true,
+    "min_words": 180,
+    "batch_trigger_count": 5,
+    "redundancy_similarity_threshold": 0.85
+  },
+  "git": {
+    "default_branch": "main",
+    "commit_prefix": "memo:"
+  }
+}

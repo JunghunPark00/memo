@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.tmp/
+.uv-cache/
+build/
+*.egg-info/
+uv.lock
+
+# Runtime workspace
+stage/inbox/
+stage/processed/
+.memo/proposals/
+
+# Runtime commit tracking (contains current commit SHA metadata)
+vault/index/commits.jsonl
