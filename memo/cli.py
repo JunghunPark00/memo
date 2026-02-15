@@ -113,7 +113,7 @@ def cmd_commit(root: Path, proposal_id: str) -> int:
 
     result = commit_proposal(root, proposal_id, config)
     print(f"Committed proposal: {result.proposal_id}")
-    print(f"Git SHA: {result.git_sha}")
+    print(f"Commit ref: {result.commit_ref}")
     print(
         "Summary: "
         f"committed={result.committed_entries}, "
@@ -140,11 +140,12 @@ def cmd_status(root: Path) -> int:
 
     if commits:
         last = commits[-1]
+        commit_ref = last.get("commit_ref") or last.get("git_sha") or "-"
         print(f"Last committed proposal: {last.get('proposal_id', '-')}")
-        print(f"Last git SHA: {last.get('git_sha', '-')}")
+        print(f"Last commit ref: {commit_ref}")
     else:
         print("Last committed proposal: -")
-        print("Last git SHA: -")
+        print("Last commit ref: -")
 
     return 0
 
@@ -170,7 +171,7 @@ def build_parser() -> argparse.ArgumentParser:
     review_parser = subparsers.add_parser("review", help="Review proposal details")
     review_parser.add_argument("proposal_id", nargs="?", default="latest", help="Proposal ID or 'latest'")
 
-    commit_parser = subparsers.add_parser("commit", help="Finalize approved proposal into vault and git")
+    commit_parser = subparsers.add_parser("commit", help="Finalize approved proposal into vault and commit ledger")
     commit_parser.add_argument("proposal_id", help="Proposal ID or 'latest'")
 
     subparsers.add_parser("status", help="Show workflow status")

@@ -128,7 +128,7 @@ class StageItem:
 @dataclass
 class CommitResult:
     proposal_id: str
-    git_sha: str
+    commit_ref: str
     committed_entries: int
     skipped_duplicates: int
     invalid_entries: int

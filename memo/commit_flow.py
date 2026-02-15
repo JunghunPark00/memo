@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import subprocess
 import shutil
 from pathlib import Path
 from typing import Any
@@ -13,20 +12,6 @@ from .storage import apply_proposal_to_vault
 from .utils import append_jsonl_atomic, ensure_dir, now_utc_iso, read_jsonl
 
 
-def _git(root: Path, args: list[str]) -> str:
-    cmd = ["git", *args]
-    proc = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"git command failed: {' '.join(cmd)}\n{proc.stderr.strip()}")
-    return proc.stdout.strip()
-
-
-def _ensure_git_repo(root: Path) -> None:
-    git_dir = root / ".git"
-    if not git_dir.exists():
-        raise RuntimeError("No git repository found. Run `git init -b main` in the project root.")
-
-
 def _restore_file(path: Path, previous_content: str | None) -> None:
     if previous_content is None:
         if path.exists():
@@ -37,7 +22,6 @@ def _restore_file(path: Path, previous_content: str | None) -> None:
 
 
 def commit_proposal(root: Path, proposal_id: str, config: AppConfig) -> CommitResult:
-    _ensure_git_repo(root)
     proposal = load_proposal(root, proposal_id)
 
     entries_index = root / "vault" / "index" / "entries.jsonl"
@@ -54,6 +38,10 @@ def commit_proposal(root: Path, proposal_id: str, config: AppConfig) -> CommitRe
     previous_entries_index: str | None = None
     if entries_index.exists():
         previous_entries_index = entries_index.read_text(encoding="utf-8")
+
+    previous_commits_index: str | None = None
+    if commits_index.exists():
+        previous_commits_index = commits_index.read_text(encoding="utf-8")
 
     moved_stage_files: list[tuple[Path, Path]] = []
     written_paths: list[str] = []
@@ -83,21 +71,12 @@ def commit_proposal(root: Path, proposal_id: str, config: AppConfig) -> CommitRe
             f"{config.git.commit_prefix} apply proposal {proposal.proposal_id} "
             f"({committed_entries} entries, {skipped_duplicates} duplicates, {invalid_entries} invalid)"
         )
-
-        unique_paths = sorted(set(written_paths))
-        if unique_paths:
-            _git(root, ["add", *unique_paths])
-
-        commit_args = ["commit", "-m", commit_message]
-        if committed_entries == 0 and not unique_paths:
-            commit_args.insert(1, "--allow-empty")
-        _git(root, commit_args)
-        git_sha = _git(root, ["rev-parse", "HEAD"])
+        commit_ref = proposal.proposal_id
 
         commit_record: dict[str, Any] = {
             "proposal_id": proposal.proposal_id,
             "created_at": now_utc_iso(),
-            "git_sha": git_sha,
+            "commit_ref": commit_ref,
             "committed_entries": committed_entries,
             "skipped_duplicates": skipped_duplicates,
             "invalid_entries": invalid_entries,
@@ -106,7 +85,7 @@ def commit_proposal(root: Path, proposal_id: str, config: AppConfig) -> CommitRe
 
         return CommitResult(
             proposal_id=proposal.proposal_id,
-            git_sha=git_sha,
+            commit_ref=commit_ref,
             committed_entries=committed_entries,
             skipped_duplicates=skipped_duplicates,
             invalid_entries=invalid_entries,
@@ -114,17 +93,13 @@ def commit_proposal(root: Path, proposal_id: str, config: AppConfig) -> CommitRe
         )
 
     except Exception:
-        try:
-            _git(root, ["reset", "--quiet"])
-        except Exception:
-            pass
-
         for rel_path in written_paths:
             path = root / rel_path
             if path.exists() and path.is_file():
                 path.unlink()
 
         _restore_file(entries_index, previous_entries_index)
+        _restore_file(commits_index, previous_commits_index)
 
         for moved_destination, original_source in reversed(moved_stage_files):
             if moved_destination.exists():

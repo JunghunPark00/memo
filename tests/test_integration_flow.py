@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,20 +13,11 @@ from memo.utils import read_jsonl
 
 
 class IntegrationFlowTests(unittest.TestCase):
-    def _run(self, root: Path, *args: str) -> None:
-        proc = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
-        if proc.returncode != 0:
-            raise RuntimeError(proc.stderr)
-
     def test_stage_process_commit_roundtrip(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
             ensure_layout(root)
             init_default_config(root)
-
-            self._run(root, "init", "-b", "main")
-            self._run(root, "config", "user.email", "memo@example.com")
-            self._run(root, "config", "user.name", "Memo Bot")
 
             note = root / "note1.md"
             note.write_text("- [ ] Draft product memo\nNeed to ship by Friday.", encoding="utf-8")
@@ -38,10 +28,13 @@ class IntegrationFlowTests(unittest.TestCase):
 
             result = commit_proposal(root, proposal.proposal_id, load_config(root))
             self.assertEqual(result.committed_entries, 1)
-            self.assertTrue(result.git_sha)
+            self.assertTrue(result.commit_ref)
 
             entries = read_jsonl(root / "vault" / "index" / "entries.jsonl")
             self.assertEqual(len(entries), 1)
+            commits = read_jsonl(root / "vault" / "index" / "commits.jsonl")
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(commits[0]["commit_ref"], proposal.proposal_id)
 
             processed_files = list((root / "stage" / "processed").glob("*note1.md"))
             self.assertEqual(len(processed_files), 1)
@@ -51,10 +44,6 @@ class IntegrationFlowTests(unittest.TestCase):
             root = Path(tmp_dir)
             ensure_layout(root)
             init_default_config(root)
-
-            self._run(root, "init", "-b", "main")
-            self._run(root, "config", "user.email", "memo@example.com")
-            self._run(root, "config", "user.name", "Memo Bot")
 
             body = "Reference: https://example.com/docs\nHow-to notes"
 

@@ -3,7 +3,7 @@
 `memo` is a local stage-to-vault note workflow:
 1. Put raw notes in staging.
 2. Process notes into a reviewable proposal (classification + optional summary).
-3. Approve by committing proposal into the vault with a real git commit.
+3. Approve by applying a proposal into the vault and recording a runtime commit ledger entry.
 
 ## Layout
 
@@ -12,7 +12,7 @@
 - `vault/{ideas,todos,references,logs}/`: canonical stored entries.
 - `vault/summaries/`: generated summaries when heuristics trigger.
 - `vault/index/entries.jsonl`: committed entry index.
-- `vault/index/commits.jsonl`: runtime commit ledger (not git-tracked by default).
+- `vault/index/commits.jsonl`: runtime commit ledger.
 - `.memo/proposals/`: proposal JSON/Markdown artifacts.
 
 ## Install / Run
@@ -50,13 +50,4 @@ memo status
   - staged batch size crosses threshold,
   - or high redundancy vs existing summaries.
 - `memo commit` does not process unreviewed data directly; it applies an existing proposal.
-
-## Git Requirements
-
-Initialize git before committing proposals:
-
-```bash
-git init -b main
-```
-
-`memo commit` writes vault files and creates one git commit per proposal.
+- `memo commit` updates vault content and appends a runtime commit ledger record.
