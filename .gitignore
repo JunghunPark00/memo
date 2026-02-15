@@ -8,10 +8,12 @@ build/
 *.egg-info/
 uv.lock
 
-# Runtime workspace
-stage/inbox/
-stage/processed/
-.memo/proposals/
+# Runtime/user data (never commit to public repo)
+.memo/
+stage/
+vault/
 
-# Runtime commit tracking (contains current commit SHA metadata)
-vault/index/commits.jsonl
+# Local secrets / machine-specific overrides
+.env
+.env.*
+*.local
